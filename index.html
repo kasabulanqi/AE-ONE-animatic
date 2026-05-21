@@ -195,16 +195,6 @@
             opacity: 1;
         }
 
-        .loading-spinner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 0.75rem;
-            color: #555;
-            letter-spacing: 1px;
-        }
-
         .shot-info {
             padding: 8px;
             font-size: 0.8rem;
@@ -217,20 +207,6 @@
             color: var(--accent-color);
             background: #111;
         }
-
-        /* 本地预览提示框 */
-        .local-tip {
-            margin-top: 25px;
-            background-color: #1a1510;
-            border: 1px solid #ff990033;
-            padding: 15px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            color: #ccc;
-            line-height: 1.6;
-            width: 100%;
-            box-sizing: border-box;
-        }
     </style>
 </head>
 <body>
@@ -238,11 +214,10 @@
 <div class="container">
     <h2>
         <div>AE ONE // ANIMATIC PREVIEW 动态分镜评审</div>
-        <span>WORKSPACE: F:\CFMOTO\AE ONE\动态分镜\</span>
+        <span>WORKSPACE: kasabulanqi.github.io</span>
     </h2>
 
-    <div class="scene-tabs" id="tabs-container">
-        </div>
+    <div class="scene-tabs" id="tabs-container"></div>
     
     <div class="video-window">
         <video id="main-player" playsinline controls></video>
@@ -256,8 +231,142 @@
     </div>
 
     <div class="storyboard-nav" id="storyboard-container"></div>
-
-    <div class="local-tip">
-        <strong>💡 手机端查看提示：</strong>如果修改后依旧不显示，是由于微信/Safari强缓存导致。请在手机浏览器中开启“无痕/隐私模式”打开网址，即可完美看到首帧！
-    </div>
 </div>
+
+<script>
+    // 【终极配置区】24个镜头归类，并显式指定了 images 目录下的缩略图
+    const sceneData = {
+        "滴水湖": [
+            { id: "SHOT_01", video: "videos/shot01.mp4", thumb: "images/shot01.jpg" },
+            { id: "SHOT_03", video: "videos/shot03.mp4", thumb: "images/shot03.jpg" },
+            { id: "SHOT_04", video: "videos/shot04.mp4", thumb: "images/shot04.jpg" },
+            { id: "SHOT_05", video: "videos/shot05.mp4", thumb: "images/shot05.jpg" },
+            { id: "SHOT_06", video: "videos/shot06.mp4", thumb: "images/shot06.jpg" },
+            { id: "SHOT_07", video: "videos/shot07.mp4", thumb: "images/shot07.jpg" },
+            { id: "SHOT_08", video: "videos/shot08.mp4", thumb: "images/shot08.jpg" },
+            { id: "SHOT_09", video: "videos/shot09.mp4", thumb: "images/shot09.jpg" },
+            { id: "SHOT_15", video: "videos/shot15.mp4", thumb: "images/shot15.jpg" },
+            { id: "SHOT_16", video: "videos/shot16.mp4", thumb: "images/shot16.jpg" },
+            { id: "SHOT_17", video: "videos/shot17.mp4", thumb: "images/shot17.jpg" },
+            { id: "SHOT_18", video: "videos/shot18.mp4", thumb: "images/shot18.jpg" },
+            { id: "SHOT_19", video: "videos/shot19.mp4", thumb: "images/shot19.jpg" },
+            { id: "SHOT_20", video: "videos/shot20.mp4", thumb: "images/shot20.jpg" },
+            { id: "SHOT_22", video: "videos/shot22.mp4", thumb: "images/shot22.jpg" }
+        ],
+        "滑板场": [
+            { id: "SHOT_02", video: "videos/shot02.mp4", thumb: "images/shot02.jpg" },
+            { id: "SHOT_10", video: "videos/shot10.mp4", thumb: "images/shot10.jpg" },
+            { id: "SHOT_11", video: "videos/shot11.mp4", thumb: "images/shot11.jpg" },
+            { id: "SHOT_12", video: "videos/shot12.mp4", thumb: "images/shot12.jpg" },
+            { id: "SHOT_13", video: "videos/shot13.mp4", thumb: "images/shot13.jpg" },
+            { id: "SHOT_14", video: "videos/shot14.mp4", thumb: "images/shot14.jpg" },
+            { id: "SHOT_21", video: "videos/shot21.mp4", thumb: "images/shot21.jpg" },
+            { id: "SHOT_23", video: "videos/shot23.mp4", thumb: "images/shot23.jpg" },
+            { id: "SHOT_24", video: "videos/shot24.mp4", thumb: "images/shot24.jpg" }
+        ]
+    };
+
+    let currentSceneKey = Object.keys(sceneData)[0]; 
+    let currentShotIndex = 0; 
+    
+    const player = document.getElementById('main-player');
+    const tabsContainer = document.getElementById('tabs-container');
+    const storyboardContainer = document.getElementById('storyboard-container');
+    const timeText = document.getElementById('time-text');
+    const timelineProgress = document.getElementById('timeline-file');
+    const timelineBg = document.getElementById('timeline-bg');
+
+    function initTabs() {
+        tabsContainer.innerHTML = '';
+        Object.keys(sceneData).forEach((sceneName) => {
+            const btn = document.createElement('button');
+            btn.className = `tab-btn ${sceneName === currentSceneKey ? 'active' : ''}`;
+            btn.textContent = sceneName;
+            btn.addEventListener('click', () => {
+                currentSceneKey = sceneName;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderStoryboard();
+                switchShot(0, false); 
+            });
+            tabsContainer.appendChild(btn);
+        });
+    }
+
+    function renderStoryboard() {
+        storyboardContainer.innerHTML = '';
+        const currentPlaylist = sceneData[currentSceneKey];
+        
+        currentPlaylist.forEach((shot, index) => {
+            const card = document.createElement('div');
+            card.className = `shot-card ${index === currentShotIndex ? 'active' : ''}`;
+            card.setAttribute('data-index', index);
+            card.innerHTML = `
+                <div class="thumb-container">
+                    <img class="shot-thumb" src="${shot.thumb}" alt="Preview">
+                </div>
+                <div class="shot-info">${shot.id}</div>
+            `;
+            card.addEventListener('click', () => switchShot(index, false));
+            storyboardContainer.appendChild(card);
+        });
+    }
+
+    function switchShot(index, playImmediately = false) {
+        const currentPlaylist = sceneData[currentSceneKey];
+        if (index < 0 || index >= currentPlaylist.length) return;
+        
+        document.querySelectorAll('.shot-card').forEach((card, i) => {
+            card.classList.toggle('active', i === index);
+        });
+
+        currentShotIndex = index;
+        player.src = currentPlaylist[index].video;
+        // 设置播放器封面图，保证大屏没播放前也有画面
+        player.poster = currentPlaylist[index].thumb;
+        player.load(); 
+        
+        if (playImmediately) {
+            player.play().catch(err => console.log("播放被拦截"));
+        }
+    }
+
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return "00:00";
+        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
+
+    player.addEventListener('timeupdate', () => {
+        const current = player.currentTime;
+        const total = player.duration || 0;
+        timeText.textContent = `${formatTime(current)} / ${formatTime(total)}`;
+        if (total > 0) {
+            timelineProgress.style.width = `${(current / total) * 100}%`;
+        }
+    });
+
+    player.addEventListener('ended', () => {
+        const currentPlaylist = sceneData[currentSceneKey];
+        if (currentShotIndex < currentPlaylist.length - 1) {
+            switchShot(currentShotIndex + 1, true); 
+        } else {
+            switchShot(0, false); 
+        }
+    });
+
+    timelineBg.addEventListener('click', (e) => {
+        const rect = timelineBg.getBoundingClientRect();
+        if (player.duration) {
+            player.currentTime = ((e.clientX - rect.left) / rect.width) * player.duration;
+        }
+    });
+
+    // 初始化运行
+    initTabs();
+    renderStoryboard();
+    switchShot(0, false);
+</script>
+</body>
+</html>
