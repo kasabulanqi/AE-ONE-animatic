@@ -241,17 +241,13 @@
         <span>WORKSPACE: F:\CFMOTO\AE ONE\动态分镜\</span>
     </h2>
 
-    <!-- 场景分类标签栏 -->
     <div class="scene-tabs" id="tabs-container">
-        <!-- 由 JS 动态生成 -->
-    </div>
+        </div>
     
-    <!-- 主播放器 -->
     <div class="video-window">
         <video id="main-player" playsinline controls></video>
     </div>
 
-    <!-- 时间轴 -->
     <div class="timeline-container">
         <div class="time-display" id="time-text">00:00 / 00:00</div>
         <div class="timeline-bar" id="timeline-bg">
@@ -259,193 +255,9 @@
         </div>
     </div>
 
-    <!-- 故事板导航轴 -->
     <div class="storyboard-nav" id="storyboard-container"></div>
 
-    <!-- 本地缩略图修复提示 -->
     <div class="local-tip">
-        <strong>💡 本地预览提示：</strong>如果下方缩略图显示“RENDERING...”或“CORS限制”，是因为浏览器保护隐私，禁止网页直接读取本地硬盘像素。
-        <br>解法：如果您使用 VS Code，请右键安装并点击 <strong>"Open with Live Server"</strong> 即可完美本地预览；或者直接将整个文件夹上传至网页服务器端，缩略图即可完全自动秒开。
+        <strong>💡 手机端查看提示：</strong>如果修改后依旧不显示，是由于微信/Safari强缓存导致。请在手机浏览器中开启“无痕/隐私模式”打开网址，即可完美看到首帧！
     </div>
 </div>
-
-<script>
-    // 【核心配置区】24个镜头已根据你的规则完美分类
-    const sceneData = {
-        "滴水湖": [
-            { id: "SHOT_01", video: "videos/shot01.mp4" },
-            { id: "SHOT_03", video: "videos/shot03.mp4" },
-            { id: "SHOT_04", video: "videos/shot04.mp4" },
-            { id: "SHOT_05", video: "videos/shot05.mp4" },
-            { id: "SHOT_06", video: "videos/shot06.mp4" },
-            { id: "SHOT_07", video: "videos/shot07.mp4" },
-            { id: "SHOT_08", video: "videos/shot08.mp4" },
-            { id: "SHOT_09", video: "videos/shot09.mp4" },
-            { id: "SHOT_15", video: "videos/shot15.mp4" },
-            { id: "SHOT_16", video: "videos/shot16.mp4" },
-            { id: "SHOT_17", video: "videos/shot17.mp4" },
-            { id: "SHOT_18", video: "videos/shot18.mp4" },
-            { id: "SHOT_19", video: "videos/shot19.mp4" },
-            { id: "SHOT_20", video: "videos/shot20.mp4" },
-            { id: "SHOT_22", video: "videos/shot22.mp4" }
-        ],
-        "滑板场": [
-            { id: "SHOT_02", video: "videos/shot02.mp4" },
-            { id: "SHOT_10", video: "videos/shot10.mp4" },
-            { id: "SHOT_11", video: "videos/shot11.mp4" },
-            { id: "SHOT_12", video: "videos/shot12.mp4" },
-            { id: "SHOT_13", video: "videos/shot13.mp4" },
-            { id: "SHOT_14", video: "videos/shot14.mp4" },
-            { id: "SHOT_21", video: "videos/shot21.mp4" },
-            { id: "SHOT_23", video: "videos/shot23.mp4" },
-            { id: "SHOT_24", video: "videos/shot24.mp4" }
-        ]
-    };
-
-    let currentSceneKey = Object.keys(sceneData)[0]; // 默认当前场景
-    let currentShotIndex = 0; // 当前选中的镜头索引
-    
-    const player = document.getElementById('main-player');
-    const tabsContainer = document.getElementById('tabs-container');
-    const storyboardContainer = document.getElementById('storyboard-container');
-    const timeText = document.getElementById('time-text');
-    const timelineProgress = document.getElementById('timeline-file');
-    const timelineBg = document.getElementById('timeline-bg');
-
-    // 1. 初始化渲染分类标签
-    function initTabs() {
-        tabsContainer.innerHTML = '';
-        Object.keys(sceneData).forEach((sceneName, idx) => {
-            const btn = document.createElement('button');
-            btn.className = `tab-btn ${sceneName === currentSceneKey ? 'active' : ''}`;
-            btn.textContent = sceneName;
-            btn.addEventListener('click', () => {
-                currentSceneKey = sceneName;
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                // 切换场景后，默认加载新场景的第一个镜头，但不播放
-                renderStoryboard();
-                switchShot(0, false); 
-            });
-            tabsContainer.appendChild(btn);
-        });
-    }
-
-    // 2. 渲染当前场景的分镜轴
-    function renderStoryboard() {
-        storyboardContainer.innerHTML = '';
-        const currentPlaylist = sceneData[currentSceneKey];
-        
-        currentPlaylist.forEach((shot, index) => {
-            const card = document.createElement('div');
-            card.className = `shot-card ${index === currentShotIndex ? 'active' : ''}`;
-            card.setAttribute('data-index', index);
-            
-            card.innerHTML = `
-                <div class="thumb-container" id="thumb-box-${index}">
-                    <span class="loading-spinner">RENDERING...</span>
-                </div>
-                <div class="shot-info">${shot.id}</div>
-            `;
-            
-            // 点击缩略图：仅切换并定位到首帧，不直接自动播放
-            card.addEventListener('click', () => switchShot(index, false));
-            storyboardContainer.appendChild(card);
-
-            // 异步自动截取视频首帧
-            generateVideoFirstFrame(shot.video, index);
-        });
-    }
-
-    // 3. 自动截屏核心函数
-    function generateVideoFirstFrame(videoUrl, index) {
-        const tempVideo = document.createElement('video');
-        tempVideo.src = videoUrl;
-        tempVideo.muted = true;
-        tempVideo.preload = "metadata";
-        tempVideo.currentTime = 0.05; // 避开纯黑帧
-
-        tempVideo.addEventListener('seeked', () => {
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = 320;
-                canvas.height = 180;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(tempVideo, 0, 0, canvas.width, canvas.height);
-                
-                const dataURL = canvas.toDataURL('image/jpeg', 0.8);
-                const thumbBox = document.getElementById(`thumb-box-${index}`);
-                if (thumbBox) {
-                    thumbBox.innerHTML = `<img class="shot-thumb" src="${dataURL}" alt="Preview">`;
-                }
-            } catch (e) {
-                const thumbBox = document.getElementById(`thumb-box-${index}`);
-                if (thumbBox) {
-                    thumbBox.innerHTML = `<span class="loading-spinner" style="color:#aaa; font-size:0.65rem;">CORS限制</span>`;
-                }
-            }
-            tempVideo.src = '';
-            tempVideo.load();
-        });
-    }
-
-    // 4. 切换镜头函数 (playImmediately 控制是否自动播放)
-    function switchShot(index, playImmediately = false) {
-        const currentPlaylist = sceneData[currentSceneKey];
-        if (index < 0 || index >= currentPlaylist.length) return;
-        
-        document.querySelectorAll('.shot-card').forEach((card, i) => {
-            card.classList.toggle('active', i === index);
-        });
-
-        currentShotIndex = index;
-        player.src = currentPlaylist[index].video;
-        player.load(); 
-        
-        if (playImmediately) {
-            player.play().catch(err => console.log("播放被拦截"));
-        }
-    }
-
-    // 5. 基础时间控制逻辑
-    function formatTime(seconds) {
-        if (isNaN(seconds)) return "00:00";
-        const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-        return `${mins}:${secs}`;
-    }
-
-    player.addEventListener('timeupdate', () => {
-        const current = player.currentTime;
-        const total = player.duration || 0;
-        timeText.textContent = `${formatTime(current)} / ${formatTime(total)}`;
-        if (total > 0) {
-            timelineProgress.style.width = `${(current / total) * 100}%`;
-        }
-    });
-
-    // 连播逻辑：当点击播放后，该场景内的镜头会自动往下连播
-    player.addEventListener('ended', () => {
-        const currentPlaylist = sceneData[currentSceneKey];
-        if (currentShotIndex < currentPlaylist.length - 1) {
-            switchShot(currentShotIndex + 1, true); // 自动切下一镜并继续播放
-        } else {
-            switchShot(0, false); // 该类别放完，回到本分类第一个镜头并静止
-        }
-    });
-
-    timelineBg.addEventListener('click', (e) => {
-        const rect = timelineBg.getBoundingClientRect();
-        if (player.duration) {
-            player.currentTime = ((e.clientX - rect.left) / rect.width) * player.duration;
-        }
-    });
-
-    // 初始化运行
-    initTabs();
-    renderStoryboard();
-    switchShot(0, false); // 默认首镜静止
-</script>
-</body>
-</html>
